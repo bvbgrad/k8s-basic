@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: my-nginx
+    tier: frontend
+spec:
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: my-nginx
+        tier: frontend
+    spec:
+      volumes:
+      - name: html
+        emptyDir: {}
+      containers:
+      - name: my-nginx
+        image: nginx:alpine
+        volumeMounts:
+          - name: html
+            mountPath: /usr/share/nginx/html
+            readOnly: true
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            memory: "128Mi"  #128 MB
+            cpu: "200m" # 200 millicpu (cpu 20%)
+        readinessProbe:
+          httpGet:
+            path: /index.html
+            port: 80
+          initialDelaySeconds: 2
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /index.html
+            port: 80
+          initialDelaySeconds: 15
+          timeoutSeconds: 2
+          periodSeconds: 5
+          failureThreshold: 1
+      - name: html-updater
+        image: alpine
+        command: ["/bin/sh", "-c"]
+        args:
+          - while true; do date >> /html/index.html;
+              sleep 10; done
+        volumeMounts:
+          - name: html
+            mountPath: /html
